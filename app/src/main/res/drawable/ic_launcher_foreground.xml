@@ -1,0 +1,7 @@
+This XML file does not appear to have any style information associated with it. The document tree is shown below.
+<vector xmlns:android="http://schemas.android.com/apk/res/android" android:width="108dp" android:height="108dp" android:viewportWidth="108" android:viewportHeight="108">
+<!--  Warm circle  -->
+<path android:fillColor="#F59E0B" android:pathData="M54,28 A26,26 0 1,0 54.01,28 Z"/>
+<!--  White play triangle  -->
+<path android:fillColor="#FFFFFF" android:pathData="M46,40 L46,68 L69,54 Z"/>
+</vector>
