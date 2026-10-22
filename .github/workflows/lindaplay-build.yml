@@ -1,0 +1,93 @@
+name: Build Linda play APK
+
+on:
+  push:
+    branches: [main, master]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+env:
+  APP_VERSION: 1.0.${{ github.run_number }}
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout source
+        uses: actions/checkout@v4
+
+      - name: Check the signing key is set up
+        env:
+          KEYSTORE_BASE64: ${{ secrets.KEYSTORE_BASE64 }}
+          KEYSTORE_PASSWORD: ${{ secrets.KEYSTORE_PASSWORD }}
+          KEY_ALIAS: ${{ secrets.KEY_ALIAS }}
+          KEY_PASSWORD: ${{ secrets.KEY_PASSWORD }}
+        run: |
+          if [ -z "$KEYSTORE_BASE64" ] || [ -z "$KEYSTORE_PASSWORD" ] || [ -z "$KEY_ALIAS" ] || [ -z "$KEY_PASSWORD" ]; then
+            echo "::error::Signing key missing. Run 'Create signing key (run once)' and add the 4 secrets."
+            exit 1
+          fi
+          echo "$KEYSTORE_BASE64" | base64 -d > "$RUNNER_TEMP/lindaplay.jks"
+
+      - name: Set up Java
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: "17"
+
+      - name: Set up Android SDK
+        uses: android-actions/setup-android@v4
+        with:
+          accept-android-sdk-licenses: "true"
+          packages: "platform-tools"
+
+      - name: Install Android SDK packages
+        run: |
+          sdkmanager --sdk_root="$ANDROID_HOME" \
+            "platforms;android-35" \
+            "build-tools;35.0.0"
+
+      - name: Set up Gradle
+        uses: gradle/actions/setup-gradle@v4
+        with:
+          gradle-version: "8.9"
+
+      - name: Build signed APK
+        env:
+          KEYSTORE_PATH: ${{ runner.temp }}/lindaplay.jks
+          KEYSTORE_PASSWORD: ${{ secrets.KEYSTORE_PASSWORD }}
+          KEY_ALIAS: ${{ secrets.KEY_ALIAS }}
+          KEY_PASSWORD: ${{ secrets.KEY_PASSWORD }}
+          VERSION_CODE: ${{ github.run_number }}
+          VERSION_NAME: ${{ env.APP_VERSION }}
+        run: gradle --no-daemon assembleRelease
+
+      - name: Name the APK and write the details
+        run: |
+          mkdir -p dist
+          cp app/build/outputs/apk/release/app-release.apk "dist/LindaPlay-${APP_VERSION}.apk"
+          SUM=$(sha256sum "dist/LindaPlay-${APP_VERSION}.apk" | cut -d' ' -f1)
+          {
+            echo "## Linda Kids ${APP_VERSION}"
+            echo
+            echo "Type this exact version in the store admin: \`${APP_VERSION}\`"
+            echo
+            echo "SHA-256: \`${SUM}\`"
+            echo
+            echo "Signing certificate (must be the same on every build):"
+            echo
+            echo '```'
+            "$ANDROID_HOME/build-tools/35.0.0/apksigner" verify --print-certs "dist/LindaPlay-${APP_VERSION}.apk" | grep -i "SHA-256 digest" || true
+            echo '```'
+          } >> "$GITHUB_STEP_SUMMARY"
+
+      - name: Upload APK
+        uses: actions/upload-artifact@v4
+        with:
+          name: LindaPlay-${{ env.APP_VERSION }}
+          path: dist/LindaPlay-${{ env.APP_VERSION }}.apk
+          if-no-files-found: error
+          retention-days: 30
