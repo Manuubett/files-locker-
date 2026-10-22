@@ -1082,6 +1082,17 @@ class MainActivity : Activity() {
             openParent()
         }
 
+        // Tells parents how to leave the locked screen
+        if (kidsLockOn()) {
+            footer.addView(TextView(this).apply {
+                text = "Parents: tap Parent area and enter your PIN to exit."
+                textSize = 11f
+                setTextColor(textMuted)
+                gravity = Gravity.CENTER
+                setPadding(0, dp(8), 0, 0)
+            })
+        }
+
         addFooterLabels(footer, false)
         root.addView(footer, LinearLayout.LayoutParams(matchParent, wrapContent))
 
