@@ -285,6 +285,58 @@ class MainActivity : Activity() {
         screen = name
         miniBox = null
         homeAdapter = null
+
+        // The child's home screen is pinned. Every other screen (loading,
+        // parent dashboard, picker, subscription) is released so a parent
+        // can install updates, open links and subscribe.
+        if (name == "home") {
+            handler.postDelayed({ if (screen == "home") lockKids() }, 400L)
+        } else if (name != "loading") {
+            unlockKids()
+        }
+    }
+
+    // ---------------------------------------------------------------
+    // Kids lock (screen pinning)
+    // ---------------------------------------------------------------
+
+    private fun kidsLockOn(): Boolean = prefs.getBoolean("kids_lock", true)
+
+    private fun isPinned(): Boolean {
+        val am = getSystemService(Context.ACTIVITY_SERVICE) as android.app.ActivityManager
+        return am.lockTaskModeState != android.app.ActivityManager.LOCK_TASK_MODE_NONE
+    }
+
+    private fun lockKids() {
+        if (!kidsLockOn() || isPinned() || isFinishing || isDestroyed) return
+
+        try {
+            startLockTask()
+        } catch (e: Exception) {
+            // Pinning not available right now
+        }
+    }
+
+    private fun unlockKids() {
+        if (!isPinned()) return
+
+        try {
+            stopLockTask()
+        } catch (e: Exception) {
+            // Not pinned
+        }
+    }
+
+    // Back never leaves the app. Parent screens step back one level.
+    @Suppress("DEPRECATION")
+    override fun onBackPressed() {
+        when (screen) {
+            "picker" -> showDashboard()
+            "dashboard" -> showHome()
+            else -> {
+                // Do nothing: the child stays inside Linda Play
+            }
+        }
     }
 
     // ---------------------------------------------------------------
@@ -1193,6 +1245,14 @@ class MainActivity : Activity() {
             layout, "⏱", "Daily time",
             "$limitMinutes minutes per day"
         ) { showLimitDialog() }
+
+        addMenuRow(
+            layout, "🔐", "Kids lock",
+            if (kidsLockOn()) "On · child cannot leave Linda Play" else "Off · child can use other apps"
+        ) {
+            prefs.edit().putBoolean("kids_lock", !kidsLockOn()).apply()
+            showDashboard()
+        }
 
         addMenuRow(
             layout, "🔒", "Change parent PIN", "Choose a new 4–8 digit PIN"
