@@ -1,4 +1,3 @@
-This XML file does not appear to have any style information associated with it. The document tree is shown below.
 <!--  Fallback icon for Android 6 to 7 (before adaptive icons existed)  -->
 <layer-list xmlns:android="http://schemas.android.com/apk/res/android">
 <item android:drawable="@color/ic_launcher_background"/>
