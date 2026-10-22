@@ -1,0 +1,15 @@
+      - name: Check the signing key is set up
+        env:
+          KEYSTORE_BASE64: ${{ secrets.KEYSTORE_BASE64 }}
+          KEYSTORE_PASSWORD: ${{ secrets.KEYSTORE_PASSWORD }}
+          KEY_ALIAS: ${{ secrets.KEY_ALIAS }}
+          KEY_PASSWORD: ${{ secrets.KEY_PASSWORD }}
+        run: |
+          if [ -z "$KEYSTORE_BASE64" ] || [ -z "$KEYSTORE_PASSWORD" ] || [ -z "$KEY_ALIAS" ] || [ -z "$KEY_PASSWORD" ]; then
+            echo "::error::Signing key missing. Run 'Create signing key (run once)' and add the 4 secrets."
+            exit 1
+          fi
+          echo "$KEYSTORE_BASE64" | tr -d '[:space:]' | base64 -d > "$RUNNER_TEMP/lindaplay.jks"
+          echo "KEY_ALIAS_CLEAN=$(printf '%s' "$KEY_ALIAS" | tr -d '[:space:]')" >> "$GITHUB_ENV"
+          echo "KEYSTORE_PASSWORD_CLEAN=$(printf '%s' "$KEYSTORE_PASSWORD" | tr -d '[:space:]')" >> "$GITHUB_ENV"
+          echo "KEY_PASSWORD_CLEAN=$(printf '%s' "$KEY_PASSWORD" | tr -d '[:space:]')" >> "$GITHUB_ENV"
