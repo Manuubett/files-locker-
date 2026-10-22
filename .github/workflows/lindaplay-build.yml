@@ -30,7 +30,10 @@ jobs:
             echo "::error::Signing key missing. Run 'Create signing key (run once)' and add the 4 secrets."
             exit 1
           fi
-          echo "$KEYSTORE_BASE64" | base64 -d > "$RUNNER_TEMP/lindaplay.jks"
+          echo "$KEYSTORE_BASE64" | tr -d '[:space:]' | base64 -d > "$RUNNER_TEMP/lindaplay.jks"
+          echo "KEY_ALIAS_CLEAN=$(printf '%s' "$KEY_ALIAS" | tr -d '[:space:]')" >> "$GITHUB_ENV"
+          echo "KEYSTORE_PASSWORD_CLEAN=$(printf '%s' "$KEYSTORE_PASSWORD" | tr -d '[:space:]')" >> "$GITHUB_ENV"
+          echo "KEY_PASSWORD_CLEAN=$(printf '%s' "$KEY_PASSWORD" | tr -d '[:space:]')" >> "$GITHUB_ENV"
 
       - name: Set up Java
         uses: actions/setup-java@v4
@@ -58,9 +61,9 @@ jobs:
       - name: Build signed APK
         env:
           KEYSTORE_PATH: ${{ runner.temp }}/lindaplay.jks
-          KEYSTORE_PASSWORD: ${{ secrets.KEYSTORE_PASSWORD }}
-          KEY_ALIAS: ${{ secrets.KEY_ALIAS }}
-          KEY_PASSWORD: ${{ secrets.KEY_PASSWORD }}
+          KEYSTORE_PASSWORD: ${{ env.KEYSTORE_PASSWORD_CLEAN }}
+          KEY_ALIAS: ${{ env.KEY_ALIAS_CLEAN }}
+          KEY_PASSWORD: ${{ env.KEY_PASSWORD_CLEAN }}
           VERSION_CODE: ${{ github.run_number }}
           VERSION_NAME: ${{ env.APP_VERSION }}
         run: gradle --no-daemon assembleRelease
@@ -71,7 +74,7 @@ jobs:
           cp app/build/outputs/apk/release/app-release.apk "dist/LindaPlay-${APP_VERSION}.apk"
           SUM=$(sha256sum "dist/LindaPlay-${APP_VERSION}.apk" | cut -d' ' -f1)
           {
-            echo "## Linda Kids ${APP_VERSION}"
+            echo "## Linda Play ${APP_VERSION}"
             echo
             echo "Type this exact version in the store admin: \`${APP_VERSION}\`"
             echo
