@@ -300,7 +300,20 @@ class MainActivity : Activity() {
     // Kids lock (screen pinning)
     // ---------------------------------------------------------------
 
-    private fun kidsLockOn(): Boolean = prefs.getBoolean("kids_lock", true)
+    // Linda Kids already keeps the child inside approved apps, so the pinning
+    // lock is on by default only when Linda Kids is not installed. A parent's
+    // own choice (the Kids lock switch) always wins.
+    private fun isLindaKidsInstalled(): Boolean {
+        return try {
+            packageManager.getPackageInfo("com.manuubett.kidssafe", 0)
+            true
+        } catch (e: Exception) {
+            false
+        }
+    }
+
+    private fun kidsLockOn(): Boolean =
+        prefs.getBoolean("kids_lock", !isLindaKidsInstalled())
 
     private fun isPinned(): Boolean {
         val am = getSystemService(Context.ACTIVITY_SERVICE) as android.app.ActivityManager
@@ -1257,12 +1270,28 @@ class MainActivity : Activity() {
             "$limitMinutes minutes per day"
         ) { showLimitDialog() }
 
-        addMenuRow(
-            layout, "🔐", "Kids lock",
-            if (kidsLockOn()) "On · child cannot leave Linda Play" else "Off · child can use other apps"
-        ) {
+        val lockNote = if (kidsLockOn()) {
+            "On · child cannot leave Linda Play"
+        } else if (isLindaKidsInstalled() && !prefs.contains("kids_lock")) {
+            "Off · Linda Kids keeps your child inside"
+        } else {
+            "Off · child can use other apps"
+        }
+
+        addMenuRow(layout, "🔐", "Kids lock", lockNote) {
             prefs.edit().putBoolean("kids_lock", !kidsLockOn()).apply()
             showDashboard()
+        }
+
+        if (kidsLockOn()) {
+            layout.addView(TextView(this).apply {
+                text = "Tip: for a stronger lock, open phone Settings > Security > " +
+                    "Screen pinning and switch on \"Ask for PIN before unpinning\"."
+                textSize = 12f
+                setTextColor(textMuted)
+                setLineSpacing(0f, 1.15f)
+                setPadding(dp(8), dp(8), dp(8), 0)
+            })
         }
 
         addMenuRow(
